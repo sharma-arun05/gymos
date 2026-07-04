@@ -1,0 +1,17 @@
+{
+  "short_name": "GymOS",
+  "name": "GymOS — Way Ahead Fitness Operating System",
+  "icons": [
+    {
+      "src": "/vite.svg",
+      "type": "image/svg+xml",
+      "sizes": "192x192 512x512"
+    }
+  ],
+  "start_url": "/",
+  "background_color": "#09090B",
+  "theme_color": "#8B5CF6",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "description": "Premium SaaS Platform for Gym Growth, Lead CRM, VIP Trials, & WhatsApp Automations."
+}
