@@ -65,9 +65,11 @@ export const GymProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       .from('subscriptions')
       .select('plan, status')
       .eq('gym_id', profile.gym_id)
-      .single();
+      .maybeSingle();
 
-    if (subData?.plan && subData.status === 'active') {
+    if (!subData) {
+      setPlan('starter');
+    } else if (subData.plan && subData.status === 'active') {
       setPlan(subData.plan);
     }
 

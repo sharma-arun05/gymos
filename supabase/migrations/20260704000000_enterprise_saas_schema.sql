@@ -304,6 +304,27 @@ CREATE POLICY "Tenant RLS trial_feed" ON public.trial_feedback FOR ALL USING (gy
 CREATE POLICY "Tenant RLS member_conv" ON public.member_conversions FOR ALL USING (gym_id = public.get_user_gym_id());
 CREATE POLICY "Tenant RLS widget_forms" ON public.widget_forms FOR ALL USING (gym_id = public.get_user_gym_id());
 
+CREATE TABLE IF NOT EXISTS public.subscriptions (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  gym_id uuid REFERENCES public.gyms(id) ON DELETE CASCADE NOT NULL,
+  plan text NOT NULL DEFAULT 'starter',
+  status text NOT NULL DEFAULT 'trial',
+  razorpay_subscription_id text UNIQUE,
+  trial_ends_at timestamp with time zone,
+  current_period_start timestamp with time zone,
+  current_period_end timestamp with time zone,
+  cancelled_at timestamp with time zone,
+  created_at timestamp with time zone
+    DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+ALTER TABLE public.subscriptions ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Tenant RLS subscriptions"
+ON public.subscriptions
+FOR ALL
+USING (gym_id = public.get_user_gym_id());
+
 -- ----------------------------------------------------------------------------
 -- 6. BILLING, PAYMENTS & INVOICES (Module 14)
 -- ----------------------------------------------------------------------------
