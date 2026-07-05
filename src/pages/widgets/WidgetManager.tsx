@@ -15,7 +15,7 @@ export const WidgetManager: React.FC = () => {
   const [titleText, setTitleText] = useState<string>('Get Started Today');
   const [copied, setCopied] = useState<boolean>(false);
 
-  const snippetCode = `<script src="https://gymos.app/widget.js" data-gym-id="${gymId || 'demo-gym-id'}" data-theme-color="${themeColor}"></script>`;
+  const snippetCode = `<script src="https://app.wayaheadgymos.com/widget.js" data-gym-id="${gymId || 'YOUR_GYM_ID'}" data-form-id="FREE_TRIAL" data-theme-color="${themeColor}"></script>`;
 
   const handleCopySnippet = () => {
     navigator.clipboard.writeText(snippetCode);
