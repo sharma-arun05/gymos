@@ -26,11 +26,13 @@ import { CommunicationHub } from './pages/inbox/CommunicationHub';
 import { NotificationCenter } from './pages/notifications/NotificationCenter';
 import { TrialManager } from './pages/trials/TrialManager';
 import { WidgetManager } from './pages/widgets/WidgetManager';
+import { WidgetAnalytics } from './pages/widgets/WidgetAnalytics';
 import { ConversionHub } from './pages/conversions/ConversionHub';
 import { TaskManager } from './pages/tasks/TaskManager';
 import { AnalyticsHub } from './pages/analytics/AnalyticsHub';
 import { TeamManager } from './pages/team/TeamManager';
 import { SettingsSuite } from './pages/settings/SettingsSuite';
+import { AiAssistantSettings } from './pages/settings/AiAssistantSettings';
 import { AuditLogHub } from './pages/audit/AuditLogHub';
 import { FileManager } from './pages/files/FileManager';
 import { Marketplace } from './pages/integrations/Marketplace';
@@ -68,11 +70,13 @@ function App() {
               <Route path="/notifications" element={<NotificationCenter />} />
               <Route path="/trials" element={<TrialManager />} />
               <Route path="/widgets" element={<WidgetManager />} />
+              <Route path="/widgets/analytics" element={<WidgetAnalytics />} />
               <Route path="/conversions" element={<ConversionHub />} />
               <Route path="/tasks" element={<TaskManager />} />
               <Route path="/analytics" element={<AnalyticsHub />} />
               <Route path="/team" element={<TeamManager />} />
               <Route path="/settings" element={<SettingsSuite />} />
+              <Route path="/settings/ai-assistant" element={<AiAssistantSettings />} />
               <Route path="/audit" element={<AuditLogHub />} />
               <Route path="/files" element={<FileManager />} />
               <Route path="/integrations" element={<Marketplace />} />

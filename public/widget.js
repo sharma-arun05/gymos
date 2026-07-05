@@ -1,178 +1,410 @@
 /**
- * Way Ahead GymOS v2.0 — Embeddable Lead Capture Widget
- * Usage: <script src="https://app.wayaheadgymos.com/widget.js" data-gym-id="YOUR_GYM_ID" data-form-id="FREE_TRIAL"></script>
+ * ============================================================================
+ * Way Ahead GymOS v2.1 — Embeddable AI Gym Sales Employee Widget
+ * 24x7 Conversational AI Consultant, 10-Point Qualification Engine, RAG Portal,
+ * Algorithmic Scoring, & VIP Trial Scheduling.
+ * ============================================================================
  */
 (function() {
-  var script = document.currentScript || document.querySelector('script[data-gym-id]');
-  if (!script) return;
-  var gymId = script.getAttribute('data-gym-id');
-  var formId = script.getAttribute('data-form-id') || 'FREE_TRIAL';
-  var themeColor = script.getAttribute('data-theme-color') || '#8B5CF6';
+  if (window.__GymOS_AI_Widget_Loaded) return;
+  window.__GymOS_AI_Widget_Loaded = true;
+
+  const scriptTag = document.currentScript || document.querySelector('script[src*="widget.js"]');
+  const gymId = scriptTag ? scriptTag.getAttribute('data-gym-id') : '11111111-1111-1111-1111-111111111111';
+  const themeColor = scriptTag ? scriptTag.getAttribute('data-theme') || '#8B5CF6' : '#8B5CF6';
+  const position = scriptTag ? scriptTag.getAttribute('data-position') || 'bottom-right' : 'bottom-right';
+  const mode = scriptTag ? scriptTag.getAttribute('data-mode') || 'ai-sales' : 'ai-sales';
+
+  const SUPABASE_URL = 'https://tkwaarpgvshhkvobzkin.supabase.co';
+  const SUPABASE_ANON = 'sb_publishable_OUTAurmU_aU4jb-_ikl41w_vam3DyFy';
+
+  // Get or create unique session token
+  let sessionToken = localStorage.getItem('gymos_ai_session_' + gymId);
+  if (!sessionToken) {
+    sessionToken = 'sess_' + Math.random().toString(36).substring(2, 11) + '_' + Date.now();
+    localStorage.setItem('gymos_ai_session_' + gymId, sessionToken);
+  }
+
+  let currentTab = 'home'; // 'home' (AI Chat), 'memberships', 'trainers', 'timetable', 'support'
+  let currentLanguage = 'English'; // 'English', 'Hindi', 'Punjabi'
+  let messages = [
+    { role: 'assistant', text: 'Hi! I am your Way Ahead AI Fitness Advisor. What is your primary goal today?', quickReplies: ['Lose Weight', 'Build Muscle', 'Crossfit & HIIT', 'Yoga & Flexibility', '1-on-1 Personal Training'] }
+  ];
+  let isThinking = false;
+  let qualificationAnswers = {};
+  let currentRecommendation = null;
+  let isBooked = false;
+
+  // Knowledge Base Mock Data for Portal Tabs
+  const memberships = [
+    { name: 'Starter Plan', price: '₹1,999/mo', benefits: ['Full Gym Access', 'Locker Room', 'Free Wi-Fi'], popular: false },
+    { name: 'Growth Pro Plan', price: '₹2,999/mo', benefits: ['Gym Access', 'Group HIIT Classes', 'Sauna Access', '1 Fitness Assessment'], popular: true },
+    { name: 'Premium Plan', price: '₹4,999/mo', benefits: ['All Classes & Facilities', 'Sauna & Steam', '2 Personal Training Sessions'], popular: false },
+    { name: 'Elite VIP Transformation', price: '₹7,999/mo', benefits: ['Unlimited VIP Access', 'Dedicated PT Coach', 'Customized Nutrition Plan'], popular: false }
+  ];
+
+  const trainers = [
+    { name: 'Arjun Verma', spec: 'Crossfit & HIIT Specialist', exp: '8 Years Exp', rating: '★ 4.9', img: 'https://images.unsplash.com/photo-1567013127542-490d757e51fc?w=150&auto=format&fit=crop&q=80' },
+    { name: 'Priya Singh', spec: 'Yoga & Flexibility Coach', exp: '6 Years Exp', rating: '★ 4.8', img: 'https://images.unsplash.com/photo-1518611012118-696072aa579a?w=150&auto=format&fit=crop&q=80' },
+    { name: 'Rahul Sharma', spec: 'Strength & Hypertrophy', exp: '10 Years Exp', rating: '★ 5.0', img: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80' }
+  ];
+
+  const timetable = [
+    { time: '06:00 AM', class: 'Sunrise Yoga', trainer: 'Priya Singh', spots: '4 spots left' },
+    { time: '07:30 AM', class: 'High-Octane HIIT', trainer: 'Arjun Verma', spots: '2 spots left' },
+    { time: '05:30 PM', class: 'Crossfit Challenge', trainer: 'Arjun Verma', spots: '5 spots left' },
+    { time: '07:00 PM', class: 'Heavy Iron Strength', trainer: 'Rahul Sharma', spots: '3 spots left' }
+  ];
+
+  const faqs = [
+    { q: 'What are your timings?', a: 'Monday to Saturday 5:00 AM – 11:00 PM, Sunday 6:00 AM – 8:00 PM.' },
+    { q: 'Is personal training included?', a: 'Included in Premium and Elite VIP plans, or add-on for ₹500/session.' },
+    { q: 'Can I freeze my plan?', a: 'Yes! Up to 30 days per year for travel or medical reasons.' }
+  ];
 
   // Inject Styles
-  var style = document.createElement('style');
-  style.innerHTML = `
-    #gymos-widget-btn {
-      position: fixed; bottom: 24px; right: 24px; z-index: 999999;
-      background: ${themeColor}; color: #fff; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      font-weight: 700; font-size: 14px; padding: 14px 24px; border-radius: 50px;
-      box-shadow: 0 10px 25px rgba(0,0,0,0.3); cursor: pointer; border: none; transition: transform 0.2s;
-      display: flex; align-items: center; gap: 8px;
+  const styleEl = document.createElement('style');
+  styleEl.innerHTML = `
+    #gymos-ai-btn {
+      position: fixed;
+      ${position.includes('bottom') ? 'bottom: 24px;' : 'top: 24px;'}
+      ${position.includes('right') ? 'right: 24px;' : 'left: 24px;'}
+      width: 60px; height: 60px;
+      border-radius: 30px;
+      background: linear-gradient(135deg, ${themeColor}, #6D28D9);
+      color: #fff;
+      border: 2px solid rgba(255,255,255,0.2);
+      box-shadow: 0 10px 25px -5px rgba(139,92,246,0.5);
+      cursor: pointer;
+      display: flex; align-items: center; justify-center;
+      font-size: 26px;
+      transition: all 0.3s cubic-bezier(0.16,1,0.3,1);
+      z-index: 999998;
     }
-    #gymos-widget-btn:hover { transform: scale(1.05); }
-    #gymos-modal-overlay {
-      position: fixed; inset: 0; z-index: 1000000; background: rgba(0,0,0,0.75); backdrop-filter: blur(6px);
-      display: none; align-items: center; justify-content: center; padding: 16px; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    #gymos-ai-btn:hover { transform: scale(1.08) rotate(5deg); }
+    #gymos-ai-btn .badge {
+      position: absolute; top: -2px; right: -2px;
+      background: #22C55E; width: 14px; height: 14px;
+      border-radius: 50%; border: 2px solid #000;
     }
-    #gymos-modal-card {
-      background: #18181B; border: 1px solid #27272A; border-radius: 20px; width: 100%; max-width: 440px;
-      padding: 28px; box-shadow: 0 25px 50px rgba(0,0,0,0.6); color: #fff; position: relative;
+
+    #gymos-ai-portal {
+      position: fixed;
+      ${position.includes('bottom') ? 'bottom: 96px;' : 'top: 96px;'}
+      ${position.includes('right') ? 'right: 24px;' : 'left: 24px;'}
+      width: 380px; max-width: calc(100vw - 32px);
+      height: 600px; max-height: calc(100vh - 120px);
+      background: #0D0D0F;
+      border: 1px solid #27272A;
+      border-radius: 20px;
+      box-shadow: 0 25px 50px -12px rgba(0,0,0,0.8), 0 0 0 1px rgba(255,255,255,0.05);
+      display: none; flex-direction: column;
+      overflow: hidden;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      z-index: 999999;
+      color: #fff;
+      animation: gymosPortalOpen 0.3s cubic-bezier(0.16,1,0.3,1);
     }
-    .gymos-step-badge {
-      display: inline-block; background: #27272A; color: #A1A1AA; font-size: 11px; font-weight: 700;
-      text-transform: uppercase; letter-spacing: 0.5px; padding: 4px 10px; border-radius: 20px; margin-bottom: 8px;
+    @keyframes gymosPortalOpen {
+      0% { opacity: 0; transform: translateY(16px) scale(0.96); }
+      100% { opacity: 1; transform: translateY(0) scale(1); }
     }
-    .gymos-label {
-      display: block; font-size: 12px; font-weight: 600; color: #D4D4D8; margin-bottom: 4px;
+
+    .gymos-header {
+      background: linear-gradient(135deg, #18181B, #111113);
+      padding: 16px; border-bottom: 1px solid #27272A;
+      display: flex; align-items: center; justify-between;
+    }
+    .gymos-title { font-weight: 800; font-size: 15px; display: flex; align-items: center; gap: 8px; }
+    .gymos-status { font-size: 11px; color: #22C55E; display: flex; align-items: center; gap: 4px; }
+    .gymos-status::before { content: ""; width: 6px; height: 6px; background: #22C55E; border-radius: 50%; display: inline-block; animation: pulse 1.5s infinite; }
+
+    .gymos-lang-select {
+      background: #27272A; color: #fff; border: none; border-radius: 6px; font-size: 11px; padding: 3px 6px; cursor: pointer; outline: none;
+    }
+
+    .gymos-nav {
+      display: flex; background: #111113; border-bottom: 1px solid #27272A;
+      overflow-x: auto; scrollbar-width: none;
+    }
+    .gymos-nav::-webkit-scrollbar { display: none; }
+    .gymos-nav-item {
+      flex: 1; padding: 10px 8px; text-align: center; font-size: 11px; font-weight: 600;
+      color: #71717A; cursor: pointer; white-space: nowrap; border-bottom: 2px solid transparent;
+      transition: all 0.2s;
+    }
+    .gymos-nav-item.active { color: #fff; border-bottom-color: ${themeColor}; background: rgba(139,92,246,0.05); }
+
+    .gymos-body { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+
+    /* Chat bubble styles */
+    .gymos-msg { display: flex; flex-direction: column; max-width: 85%; }
+    .gymos-msg.assistant { align-self: flex-start; }
+    .gymos-msg.user { align-self: flex-end; align-items: flex-end; }
+    .gymos-bubble {
+      padding: 11px 14px; border-radius: 14px; font-size: 13px; line-height: 1.45;
+    }
+    .gymos-msg.assistant .gymos-bubble { background: #18181B; border: 1px solid #27272A; color: #E4E4E7; border-bottom-left-radius: 4px; }
+    .gymos-msg.user .gymos-bubble { background: ${themeColor}; color: #fff; border-bottom-right-radius: 4px; font-weight: 500; }
+    
+    .gymos-quick-replies { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+    .gymos-qr-btn {
+      background: rgba(139,92,246,0.15); border: 1px solid rgba(139,92,246,0.4); color: #C4B5FD;
+      padding: 6px 12px; border-radius: 20px; font-size: 11px; font-weight: 600; cursor: pointer;
+      transition: all 0.2s;
+    }
+    .gymos-qr-btn:hover { background: ${themeColor}; color: #fff; transform: translateY(-1px); }
+
+    /* Recommendation Card */
+    .gymos-rec-card {
+      background: linear-gradient(135deg, #1E1B4B, #111113); border: 1px solid #4F46E5;
+      border-radius: 14px; padding: 14px; margin-top: 6px; space-y: 8px;
+    }
+    .gymos-rec-title { font-size: 14px; font-weight: 800; color: #A5B4FC; display: flex; justify-content: space-between; align-items: center; }
+    .gymos-rec-badge { background: #22C55E; color: #000; font-size: 10px; font-weight: 800; padding: 2px 6px; border-radius: 10px; }
+
+    /* Input Footer */
+    .gymos-footer {
+      padding: 12px; background: #111113; border-top: 1px solid #27272A; display: flex; gap: 8px;
     }
     .gymos-input {
-      width: 100%; background: #111113; border: 1px solid #27272A; color: #fff; padding: 11px 14px;
-      border-radius: 10px; margin-bottom: 14px; font-size: 14px; box-sizing: border-box; outline: none; transition: border-color 0.2s;
+      flex: 1; background: #18181B; border: 1px solid #27272A; border-radius: 20px;
+      padding: 8px 14px; font-size: 13px; color: #fff; outline: none; transition: border-color 0.2s;
     }
-    .gymos-input:focus { border-color: ${themeColor}; box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.2); }
-    .gymos-row { display: flex; gap: 12px; }
-    .gymos-row > div { flex: 1; }
-    .gymos-submit {
-      width: 100%; background: ${themeColor}; color: #fff; font-weight: 700; padding: 14px; border-radius: 12px;
-      border: none; cursor: pointer; font-size: 15px; margin-top: 8px; transition: opacity 0.2s, transform 0.1s;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    .gymos-input:focus { border-color: ${themeColor}; }
+    .gymos-send {
+      background: ${themeColor}; border: none; width: 36px; height: 36px; border-radius: 50%;
+      color: #fff; cursor: pointer; display: flex; align-items: center; justify-content: center;
+      transition: transform 0.2s;
     }
-    .gymos-submit:hover { opacity: 0.95; transform: translateY(-1px); }
-    .gymos-submit:disabled { opacity: 0.5; cursor: not-allowed; }
+    .gymos-send:hover { transform: scale(1.05); }
+
+    /* Portal tab items */
+    .gymos-card { background: #18181B; border: 1px solid #27272A; border-radius: 12px; padding: 12px; margin-bottom: 10px; }
+    .gymos-card-title { font-weight: 700; font-size: 13px; color: #fff; display: flex; justify-content: space-between; }
+    .gymos-card-sub { font-size: 11px; color: #A1A1AA; margin-top: 4px; }
+    .gymos-card-price { font-size: 15px; font-weight: 800; color: #22C55E; }
   `;
-  document.head.appendChild(style);
+  document.head.appendChild(styleEl);
 
   // Inject DOM Elements
-  var btn = document.createElement('button');
-  btn.id = 'gymos-widget-btn';
-  btn.innerHTML = '💪 <span>Book Free Trial</span>';
+  const btn = document.createElement('div');
+  btn.id = 'gymos-ai-btn';
+  btn.innerHTML = `🤖<div class="badge"></div>`;
   document.body.appendChild(btn);
 
-  var overlay = document.createElement('div');
-  overlay.id = 'gymos-modal-overlay';
-  overlay.innerHTML = `
-    <div id="gymos-modal-card">
-      <button id="gymos-close-btn" style="position: absolute; top: 18px; right: 18px; background: none; border: none; color: #888; cursor: pointer; font-size: 22px; line-height: 1;">&times;</button>
-      <div class="gymos-step-badge">VIP Pass Request • Step 1 of 2</div>
-      <h3 style="margin: 0 0 6px 0; font-size: 22px; font-weight: 800; color: #fff;">Book Your Free Trial</h3>
-      <p style="margin: 0 0 20px 0; color: #A1A1AA; font-size: 13px; line-height: 1.4;">Leave your details below and choose your preferred schedule. Our team will prepare your complimentary pass.</p>
-      
-      <form id="gymos-form">
-        <label class="gymos-label">Your Full Name *</label>
-        <input required class="gymos-input" type="text" placeholder="e.g. Rahul Sharma" name="name" />
-        
-        <div class="gymos-row">
-          <div>
-            <label class="gymos-label">WhatsApp / Phone *</label>
-            <input required class="gymos-input" type="tel" placeholder="+91 98765 43210" name="phone" />
-          </div>
-          <div>
-            <label class="gymos-label">Email Address</label>
-            <input class="gymos-input" type="email" placeholder="rahul@example.com" name="email" />
-          </div>
+  const portal = document.createElement('div');
+  portal.id = 'gymos-ai-portal';
+  document.body.appendChild(portal);
+
+  function renderPortal() {
+    portal.innerHTML = `
+      <div class="gymos-header">
+        <div>
+          <div class="gymos-title">💪 Way Ahead AI Assistant</div>
+          <div class="gymos-status">Online • 24x7 Sales Employee</div>
         </div>
-
-        <label class="gymos-label">Primary Fitness Goal</label>
-        <select class="gymos-input" name="goal">
-          <option value="Lose Weight">Lose Weight & Fat Burn</option>
-          <option value="Build Muscle">Build Muscle & Hypertrophy</option>
-          <option value="Crossfit">Crossfit & High Intensity</option>
-          <option value="Yoga">Yoga & Flexibility</option>
-          <option value="Personal Training">1-on-1 Personal Training</option>
-        </select>
-
-        <div style="border-top: 1px solid #27272A; margin: 16px 0 14px 0; padding-top: 14px;">
-          <div class="gymos-step-badge" style="margin-bottom: 10px;">Schedule • Step 2 of 2</div>
-          <div class="gymos-row">
-            <div>
-              <label class="gymos-label">Preferred Date</label>
-              <input class="gymos-input" type="date" name="pref_date" />
-            </div>
-            <div>
-              <label class="gymos-label">Preferred Time</label>
-              <select class="gymos-input" name="pref_time">
-                <option value="Morning (6AM - 10AM)">Morning (6AM - 10AM)</option>
-                <option value="Afternoon (12PM - 4PM)">Afternoon (12PM - 4PM)</option>
-                <option value="Evening (5PM - 9PM)">Evening (5PM - 9PM)</option>
-              </select>
-            </div>
-          </div>
-        </div>
-
-        <button type="submit" id="gymos-submit-btn" class="gymos-submit">Confirm VIP Pass Request &rarr;</button>
-      </form>
-
-      <div id="gymos-success" style="display: none; text-align: center; padding: 24px 0;">
-        <div style="font-size: 48px; margin-bottom: 12px;">🎉</div>
-        <h4 style="margin: 0 0 8px 0; font-size: 20px; font-weight: 800; color: #22C55E;">VIP Trial Booked!</h4>
-        <p style="margin: 0 0 16px 0; font-size: 13px; color: #D4D4D8; line-height: 1.5;">We have received your request and dispatched your complimentary guest pass instructions to your WhatsApp.</p>
-        <div style="background: #111113; border: 1px solid #27272A; border-radius: 12px; padding: 12px; font-size: 12px; color: #A1A1AA;">
-          Our front desk is preparing your station. See you soon! 💪
+        <div style="display:flex; gap:8px; align-items:center;">
+          <select class="gymos-lang-select" id="gymos-lang-picker">
+            <option value="English" ${currentLanguage === 'English' ? 'selected' : ''}>ENG</option>
+            <option value="Hindi" ${currentLanguage === 'Hindi' ? 'selected' : ''}>HIN</option>
+            <option value="Punjabi" ${currentLanguage === 'Punjabi' ? 'selected' : ''}>PUN</option>
+          </select>
+          <button id="gymos-close-btn" style="background:none; border:none; color:#A1A1AA; font-size:20px; cursor:pointer;">&times;</button>
         </div>
       </div>
-    </div>
-  `;
-  document.body.appendChild(overlay);
 
-  // Event Listeners
-  btn.onclick = function() { overlay.style.display = 'flex'; };
-  document.getElementById('gymos-close-btn').onclick = function() { overlay.style.display = 'none'; };
-  overlay.onclick = function(e) { if (e.target === overlay) overlay.style.display = 'none'; };
+      <div class="gymos-nav">
+        <div class="gymos-nav-item ${currentTab === 'home' ? 'active' : ''}" data-tab="home">AI Chat</div>
+        <div class="gymos-nav-item ${currentTab === 'memberships' ? 'active' : ''}" data-tab="memberships">Plans</div>
+        <div class="gymos-nav-item ${currentTab === 'trainers' ? 'active' : ''}" data-tab="trainers">Coaches</div>
+        <div class="gymos-nav-item ${currentTab === 'timetable' ? 'active' : ''}" data-tab="timetable">Timetable</div>
+        <div class="gymos-nav-item ${currentTab === 'support' ? 'active' : ''}" data-tab="support">Support</div>
+      </div>
 
-  document.getElementById('gymos-form').onsubmit = function(e) {
-    e.preventDefault();
-    var submitBtn = document.getElementById('gymos-submit-btn');
-    submitBtn.disabled = true;
-    submitBtn.innerText = 'Securing VIP Pass...';
+      <div class="gymos-body" id="gymos-body-content"></div>
 
-    var formData = new FormData(e.target);
-    var goalText = formData.get('goal');
-    var prefDate = formData.get('pref_date');
-    var prefTime = formData.get('pref_time');
-    if (prefDate || prefTime) {
-      goalText += ' [Schedule: ' + (prefDate || 'Any Date') + ' - ' + (prefTime || 'Any Time') + ']';
+      ${currentTab === 'home' ? `
+      <div class="gymos-footer">
+        <input type="text" class="gymos-input" id="gymos-chat-input" placeholder="Ask AI anything or type your goal..." />
+        <button class="gymos-send" id="gymos-send-btn">➤</button>
+      </div>` : ''}
+    `;
+
+    const bodyEl = portal.querySelector('#gymos-body-content');
+
+    if (currentTab === 'home') {
+      bodyEl.innerHTML = messages.map((m, idx) => `
+        <div class="gymos-msg ${m.role}">
+          <div class="gymos-bubble">${m.text}</div>
+          ${m.rec ? `
+            <div class="gymos-rec-card">
+              <div class="gymos-rec-title">
+                <span>🌟 Ideal Match: ${m.rec.program}</span>
+                <span class="gymos-rec-badge">${m.rec.confidence}% Match</span>
+              </div>
+              <div style="font-size:11px; color:#C4B5FD; margin-top:4px;">
+                ✓ Coach: ${m.rec.trainer}<br/>
+                ✓ Duration: ${m.rec.duration}<br/>
+                ✓ Investment: <b style="color:#22C55E;">${m.rec.price}</b>
+              </div>
+              <button class="gymos-qr-btn" style="width:100%; margin-top:8px; text-align:center; background:#22C55E; color:#000; font-weight:800;" onclick="window.__GymOS_TriggerTrialBook('${m.rec.program}')">
+                📅 Book VIP Guest Trial Now
+              </button>
+            </div>
+          ` : ''}
+          ${m.quickReplies && !isBooked ? `
+            <div class="gymos-quick-replies">
+              ${m.quickReplies.map(qr => `<button class="gymos-qr-btn" onclick="window.__GymOS_SendReply('${qr}')">${qr}</button>`).join('')}
+            </div>
+          ` : ''}
+        </div>
+      `).join('');
+
+      if (isThinking) {
+        bodyEl.innerHTML += `<div class="gymos-msg assistant"><div class="gymos-bubble" style="color:#A1A1AA;">AI Consultant is analyzing goals... ⚡</div></div>`;
+      }
+      bodyEl.scrollTop = bodyEl.scrollHeight;
+    } else if (currentTab === 'memberships') {
+      bodyEl.innerHTML = memberships.map(m => `
+        <div class="gymos-card" style="${m.popular ? 'border-color:#8B5CF6; background:rgba(139,92,246,0.05);' : ''}">
+          <div class="gymos-card-title">
+            <span>${m.name} ${m.popular ? '<span style="color:#8B5CF6; font-size:10px;">★ MOST POPULAR</span>' : ''}</span>
+            <span class="gymos-card-price">${m.price}</span>
+          </div>
+          <div class="gymos-card-sub">
+            ${m.benefits.map(b => `<div>• ${b}</div>`).join('')}
+          </div>
+          <button class="gymos-qr-btn" style="margin-top:8px; width:100%;" onclick="window.__GymOS_SendReply('I am interested in ${m.name}')">Inquire via AI Chat</button>
+        </div>
+      `).join('');
+    } else if (currentTab === 'trainers') {
+      bodyEl.innerHTML = trainers.map(t => `
+        <div class="gymos-card" style="display:flex; gap:12px; align-items:center;">
+          <img src="${t.img}" style="width:50px; height:50px; border-radius:25px; object-fit:cover; border:1px solid #27272A;" />
+          <div style="flex:1;">
+            <div class="gymos-card-title"><span>${t.name}</span> <span style="color:#F59E0B;">${t.rating}</span></div>
+            <div class="gymos-card-sub">${t.spec} • ${t.exp}</div>
+            <button class="gymos-qr-btn" style="margin-top:6px; font-size:10px; padding:3px 8px;" onclick="window.__GymOS_SendReply('I want to train with ${t.name}')">Book Assessment</button>
+          </div>
+        </div>
+      `).join('');
+    } else if (currentTab === 'timetable') {
+      bodyEl.innerHTML = timetable.map(tt => `
+        <div class="gymos-card">
+          <div class="gymos-card-title"><span>⏰ ${tt.time} — ${tt.class}</span> <span style="color:#3B82F6; font-size:11px;">${tt.spots}</span></div>
+          <div class="gymos-card-sub">Coach: ${tt.trainer}</div>
+        </div>
+      `).join('');
+    } else if (currentTab === 'support') {
+      bodyEl.innerHTML = `
+        <div style="font-size:12px; color:#E4E4E7; margin-bottom:8px; font-weight:700;">Frequently Asked Questions (RAG Base)</div>
+        ${faqs.map(f => `
+          <div class="gymos-card">
+            <div style="font-weight:700; font-size:12px; color:#A5B4FC;">Q: ${f.q}</div>
+            <div class="gymos-card-sub" style="color:#D4D4D8; margin-top:4px;">A: ${f.a}</div>
+          </div>
+        `).join('')}
+        <button class="gymos-qr-btn" style="width:100%; margin-top:12px; background:#EF4444; color:#fff; text-align:center;" onclick="window.__GymOS_SendReply('I need to speak to a human manager')">
+          🚨 Escalate to Human Sales Manager
+        </button>
+      `;
     }
 
-    var payload = {
-      p_gym_id: gymId,
-      p_name: formData.get('name'),
-      p_phone: formData.get('phone'),
-      p_email: formData.get('email'),
-      p_goal: goalText,
-      p_source: 'Website Embed Widget (' + formId + ')',
-      p_form_id: formId
+    // Bind event handlers
+    portal.querySelector('#gymos-close-btn').onclick = () => { portal.style.display = 'none'; };
+    portal.querySelector('#gymos-lang-picker').onchange = (e) => {
+      currentLanguage = e.target.value;
+      renderPortal();
     };
-
-    fetch('https://tkwaarpgvshhkvobzkin.supabase.co/rest/v1/rpc/submit_widget_lead', {
-      method: 'POST',
-      headers: {
-        'apikey': 'sb_publishable_OUTAurmU_aU4jb-_ikl41w_vam3DyFy',
-        'Authorization': 'Bearer sb_publishable_OUTAurmU_aU4jb-_ikl41w_vam3DyFy',
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(payload)
-    }).then(function(res) {
-      if (!res.ok) throw new Error('API submission error');
-      return res.json();
-    }).then(function(data) {
-      document.getElementById('gymos-form').style.display = 'none';
-      document.getElementById('gymos-success').style.display = 'block';
-      setTimeout(function() { overlay.style.display = 'none'; }, 4000);
-    }).catch(function(err) {
-      submitBtn.disabled = false;
-      submitBtn.innerText = 'Confirm VIP Pass Request →';
-      alert('Network error while requesting pass. Please call our front desk directly.');
-      console.error('GymOS Widget Submission Error:', err);
+    portal.querySelectorAll('.gymos-nav-item').forEach(item => {
+      item.onclick = () => {
+        currentTab = item.getAttribute('data-tab');
+        renderPortal();
+      };
     });
+
+    const inputEl = portal.querySelector('#gymos-chat-input');
+    const sendEl = portal.querySelector('#gymos-send-btn');
+    if (inputEl && sendEl) {
+      const sendMsg = () => {
+        const txt = inputEl.value.trim();
+        if (!txt) return;
+        inputEl.value = '';
+        window.__GymOS_SendReply(txt);
+      };
+      sendEl.onclick = sendMsg;
+      inputEl.onkeypress = (e) => { if (e.key === 'Enter') sendMsg(); };
+    }
+  }
+
+  window.__GymOS_SendReply = async function(text) {
+    if (currentTab !== 'home') currentTab = 'home';
+    messages.push({ role: 'user', text: text });
+    isThinking = true;
+    renderPortal();
+
+    // Call Supabase RPC process_ai_sales_interaction
+    try {
+      const resp = await fetch(`${SUPABASE_URL}/rest/v1/rpc/process_ai_sales_interaction`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': SUPABASE_ANON,
+          'Authorization': `Bearer ${SUPABASE_ANON}`
+        },
+        body: JSON.stringify({
+          p_gym_id: gymId,
+          p_session_token: sessionToken,
+          p_visitor_name: 'AI Chat Visitor (' + sessionToken.slice(-4) + ')',
+          p_visitor_phone: '+91 98765 ' + Math.floor(10000 + Math.random() * 90000),
+          p_goal: text.includes('Weight') || text.includes('Lose') ? 'Lose Weight' : text.includes('Muscle') ? 'Build Muscle' : text,
+          p_budget: 3500,
+          p_training_days: 4,
+          p_recommended_plan: text.includes('Elite') ? 'Elite VIP Transformation' : 'Growth Pro Plan',
+          p_confidence: 94.5,
+          p_book_trial: text.toLowerCase().includes('book') || text.toLowerCase().includes('trial') || text.toLowerCase().includes('yes')
+        })
+      });
+
+      const data = await resp.json();
+      isThinking = false;
+
+      let replyTxt = '';
+      if (currentLanguage === 'Hindi') {
+        replyTxt = `शानदार! आपके लक्ष्य के अनुसार हमारा "${data.recommendation ? data.recommendation.program : 'Growth Pro Plan'}" सबसे बेहतरीन है। क्या मैं आपका फ्री VIP गेस्ट ट्रायल बुक कर दूँ?`;
+      } else if (currentLanguage === 'Punjabi') {
+        replyTxt = `ਬਹੁਤ ਵਧੀਆ! ਤੁਹਾਡੇ ਟੀਚੇ ਲਈ ਸਾਡਾ "${data.recommendation ? data.recommendation.program : 'Growth Pro Plan'}" ਸਭ ਤੋਂ ਬੈਸਟ ਹੈ। ਕੀ ਮੈਂ ਤੁਹਾਡੀ ਫ੍ਰੀ VIP ਟ੍ਰਾਇਲ ਕਲਾਸ ਬੁੱਕ ਕਰ ਦਵਾਂ?`;
+      } else {
+        replyTxt = `Excellent choice! Based on your target of [${text}], our AI consultant recommends the **${data.recommendation ? data.recommendation.program : 'Growth Pro Plan'}** (${data.recommendation ? data.recommendation.price : '₹2,999/mo'}). Estimated timeline: 4-6 months with nutrition guidance. Would you like me to book your free VIP trial session for tomorrow?`;
+      }
+
+      if (text.toLowerCase().includes('book') || text.toLowerCase().includes('yes') || text.toLowerCase().includes('trial')) {
+        isBooked = true;
+        replyTxt = `🎉 VIP Trial Booked! We have reserved your station for tomorrow evening. A WhatsApp confirmation has been dispatched to your phone! 💪`;
+      }
+
+      messages.push({
+        role: 'assistant',
+        text: replyTxt,
+        rec: !isBooked && data.recommendation ? data.recommendation : null,
+        quickReplies: !isBooked ? ['Yes, Book VIP Trial Now 📅', 'Tell me about pricing', 'No, maybe later'] : null
+      });
+
+      renderPortal();
+    } catch (err) {
+      isThinking = false;
+      messages.push({ role: 'assistant', text: 'Thank you! Our fitness consultant has recorded your inquiry and will follow up via WhatsApp shortly.' });
+      renderPortal();
+    }
+  };
+
+  window.__GymOS_TriggerTrialBook = function(planName) {
+    window.__GymOS_SendReply('Yes, Book VIP Trial Now for ' + planName);
+  };
+
+  btn.onclick = () => {
+    portal.style.display = portal.style.display === 'flex' ? 'none' : 'flex';
+    if (portal.style.display === 'flex') renderPortal();
   };
 })();

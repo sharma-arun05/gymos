@@ -8,7 +8,7 @@ import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import { 
   LayoutDashboard, Users, MessageSquare, Zap, GitBranch, LogOut, Dumbbell, 
   CreditCard, Calendar, Trophy, CheckSquare, BarChart2, Sparkles, HeartPulse, 
-  Plug, Folder, Shield, Settings, LifeBuoy, Activity, Database, Search, Command, Bell 
+  Plug, Folder, Shield, Settings, LifeBuoy, Activity, Database, Search, Command, Bell, Globe 
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useGym } from '../../context/GymContext';
@@ -32,6 +32,7 @@ export const AppLayout: React.FC = () => {
     ]},
     { category: 'Automations & AI Hub', items: [
       { name: 'Workflow Engine', href: '/automations', icon: Zap },
+      { name: 'AI Sales Widget', href: '/widgets', icon: Globe },
       { name: 'Communication Inbox', href: '/inbox', icon: MessageSquare },
       { name: 'AI Growth Copilot', href: '/ai', icon: Sparkles },
       { name: 'Retention & Win-Back', href: '/retention', icon: HeartPulse },

@@ -4,11 +4,13 @@
 // ============================================================================
 
 import React, { useState } from 'react';
-import { Code, Copy, Check, Layout, Globe, Palette } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Code, Copy, Check, Layout, Globe, Palette, Cpu, Bot } from 'lucide-react';
 import { useGym } from '../../context/GymContext';
 import { Button, Card, Input, Badge } from '../../components/ui';
 
 export const WidgetManager: React.FC = () => {
+  const navigate = useNavigate();
   const { gymId } = useGym();
   const [themeColor, setThemeColor] = useState<string>('#8B5CF6');
   const [buttonText, setButtonText] = useState<string>('💪 Claim Free Guest Pass');
@@ -26,12 +28,22 @@ export const WidgetManager: React.FC = () => {
   return (
     <div className="max-w-6xl mx-auto space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-black text-white tracking-tight flex items-center gap-2">
-          <Globe className="w-6 h-6 text-[#8B5CF6]" />
-          Website Lead Capture Widget
-        </h1>
-        <p className="text-sm text-gray-400">Embed our lightweight (4KB) lead conversion popup directly onto your gym's website or WordPress page.</p>
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-[#27272A] pb-4">
+        <div>
+          <h1 className="text-2xl font-black text-white tracking-tight flex items-center gap-2">
+            <Globe className="w-6 h-6 text-[#8B5CF6]" />
+            Website Lead Capture Widget v2.1
+          </h1>
+          <p className="text-sm text-gray-400 mt-1">Embed our 24x7 AI Sales Employee & Lead Conversion Popup onto your gym's website.</p>
+        </div>
+        <div className="flex items-center gap-2.5">
+          <Button variant="secondary" size="sm" onClick={() => navigate('/widgets/analytics')} leftIcon={<Cpu className="w-4 h-4 text-[#8B5CF6]" />}>
+            AI Telemetry
+          </Button>
+          <Button variant="primary" size="sm" onClick={() => navigate('/settings/ai-assistant')} leftIcon={<Bot className="w-4 h-4" />}>
+            Configure AI Employee
+          </Button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
